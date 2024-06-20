@@ -7,6 +7,7 @@ from pathlib import Path
 import aiofiles
 import aiohttp
 import eth_abi
+from hexbytes import HexBytes
 from web3 import AsyncWeb3
 
 import accounts_loader
@@ -105,19 +106,62 @@ async def process_account(
                 if not gas_price:
                     continue
 
+                value = donation_in_wei
+
+                if network.chain_id == enums.NetworkNames.Arbitrum.value:
+                    extra_bytes = b''
+                else:
+                    arbitrum_web3 = AsyncWeb3(
+                        AsyncWeb3.AsyncHTTPProvider(
+                            'https://arb1.arbitrum.io/rpc',
+                            request_kwargs={
+                                'proxy': bot_account.proxy
+                            }
+                        )
+                    )
+
+                    arbitrum_claim_contract = arbitrum_web3.eth.contract(
+                        address=constants.CLAIM_ADDRESSES[enums.NetworkNames.Arbitrum.value],
+                        abi=claim_abi
+                    )
+
+                    l0_gas_response = await arbitrum_web3.eth.call(
+                        {
+                            'to': await arbitrum_claim_contract.functions.claimContract().call(),
+                            'data': '0x73760a89' + eth_abi.encode(['uint256', 'uint256'], [network.layerzero_chain_id, amount_in_wei]).hex()
+                        }
+                    )
+
+                    l0_gas = int(eth_abi.decode(['uint256'], l0_gas_response)[0] * 1.05)
+
+                    l0_gas_hex = hex(l0_gas)[2:].zfill(64)
+
+                    extra_bytes = f'000301002101{l0_gas_hex}'
+
+                    value += l0_gas
+
+                    send_fee_response = await web3.eth.call(
+                        {
+                            'to': await claim_contract.functions.claimContract().call(),
+                            'data': '0x9baa23e6' + eth_account.address[2:].lower().zfill(64) + hex(amount_in_wei)[2:].zfill(64) + f'00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000026{extra_bytes}0000000000000000000000000000000000000000000000000000'
+                        }
+                    )
+
+                    value += eth_abi.decode(['uint256'], send_fee_response)[0]
+
                 txn = await claim_contract.functions.donateAndClaim(
                     2,
                     donation_in_wei,
                     amount_in_wei,
                     proof,
                     eth_account.address,
-                    b''
+                    HexBytes(extra_bytes)
                 ).build_transaction(
                     {
                         'chainId': network.chain_id,
                         'nonce': await web3.eth.get_transaction_count(eth_account.address),
                         'from': eth_account.address,
-                        'value': donation_in_wei,
+                        'value': value,
                         'gas': 0,
                         **gas_price
                     }

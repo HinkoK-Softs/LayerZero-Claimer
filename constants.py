@@ -13,6 +13,7 @@ TOKEN_DECIMALS = 18
 @dataclass
 class Network:
     chain_id: int
+    layerzero_chain_id: int
     name: str
     rpc_url: str
     txn_explorer_url: str
@@ -34,6 +35,7 @@ with open(Path(__file__).parent / 'RPC.json') as file:
 NETWORKS = NetworksDict({
     enums.NetworkNames.Arbitrum: Network(
         42161,
+        30110,
         'Arbitrum One',
         rpc_list.get(
             enums.NetworkNames.Arbitrum.name,
@@ -43,6 +45,7 @@ NETWORKS = NetworksDict({
     ),
     enums.NetworkNames.Avalanche: Network(
         43114,
+        30106,
         'Avalanche C-Chain',
         rpc_list.get(
             enums.NetworkNames.Avalanche.name,
@@ -52,6 +55,7 @@ NETWORKS = NetworksDict({
     ),
     enums.NetworkNames.Base: Network(
         8453,
+        30184,
         'Base',
         rpc_list.get(
             enums.NetworkNames.Base.name,
@@ -61,6 +65,7 @@ NETWORKS = NetworksDict({
     ),
     enums.NetworkNames.BSC: Network(
         56,
+        30102,
         'Binance Smart Chain',
         rpc_list.get(
             enums.NetworkNames.BSC.name,
@@ -70,6 +75,7 @@ NETWORKS = NetworksDict({
     ),
     enums.NetworkNames.Ethereum: Network(
         1,
+        30101,
         'Ethereum',
         rpc_list.get(
             enums.NetworkNames.Ethereum.name,
@@ -79,6 +85,7 @@ NETWORKS = NetworksDict({
     ),
     enums.NetworkNames.Optimism: Network(
         10,
+        30111,
         'Optimism',
         rpc_list.get(
             enums.NetworkNames.Optimism.name,
@@ -88,6 +95,7 @@ NETWORKS = NetworksDict({
     ),
     enums.NetworkNames.Polygon: Network(
         137,
+        30109,
         'Polygon',
         rpc_list.get(
             enums.NetworkNames.Polygon.name,
