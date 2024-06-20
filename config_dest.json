@@ -1,0 +1,5 @@
+{
+    "threads": 10,
+    "max_retries": 5,
+    "comission_mode": "default"
+}

@@ -1,0 +1,9 @@
+{
+    "Arbitrum": "https://rpc.ankr.com/arbitrum",
+    "Avalanche": "https://rpc.ankr.com/avalanche",
+    "Base": "https://rpc.ankr.com/base",
+    "BSC": "https://rpc.ankr.com/bsc",
+    "Ethereum": "https://rpc.ankr.com/eth",
+    "Optimism": "https://rpc.ankr.com/optimism",
+    "Polygon": "https://polygon-rpc.com"
+}
