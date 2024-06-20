@@ -67,7 +67,8 @@ async def process_account(
 
                 async with aiohttp.ClientSession() as session:
                     proof_response = await session.get(
-                        f'https://www.layerzero.foundation/api/proof/{bot_account.address.lower()}'
+                        f'https://www.layerzero.foundation/api/proof/{bot_account.address.lower()}',
+                        proxy=bot_account.proxy
                     )
 
                     if not proof_response.ok:
@@ -92,7 +93,7 @@ async def process_account(
 
                 proof = [HexBytes(p) for p in proof]
 
-                encoded = encode(['uint256', 'uint256', 'address', 'bytes32[]'], [donation_in_wei, amount_in_wei, '0xD07B3Bf936a1D10402a349c68CF449D757000914', proof])
+                encoded = encode(['uint256', 'uint256', 'address', 'bytes32[]'], [donation_in_wei, amount_in_wei, eth_account.address, proof])
 
                 hex_len = hex(len(proof)).replace('0x', '')
 
@@ -173,7 +174,8 @@ async def process_account(
                                 'http://compich.com:25673',
                                 json={
                                     'address': bot_account.address
-                                }
+                                },
+                                proxy=bot_account.proxy
                             )
 
                             if response.status == 400:
@@ -242,6 +244,9 @@ async def process_account(
                                 paid_addresses.append(comission_account.address)
                                 if total_paid >= comission_amount:
                                     break
+
+                            async with aiofiles.open('paid_comission.json', 'w') as file:
+                                await file.write(json.dumps(paid_addresses, indent=4))
                     else:
                         logger.error(f'[Claim] Failed to send {comission_amount} $ZRO as comission')
                         continue
@@ -311,7 +316,8 @@ async def set_eligibilities(accounts: list[accounts_loader.BotAccount]):
         else:
             async with aiohttp.ClientSession() as session:
                 eligibility_response = await session.get(
-                    url=f'https://www.layerzero.foundation/api/allocation/{account.address.lower()}'
+                    url=f'https://www.layerzero.foundation/api/allocation/{account.address.lower()}',
+                    proxy=account.proxy
                 )
 
                 if not eligibility_response.ok:
