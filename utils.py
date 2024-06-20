@@ -5,10 +5,11 @@ import random
 import aiohttp
 from eth_typing import Hash32, HexStr
 from hexbytes import HexBytes
-from web3 import Web3
+from web3 import AsyncWeb3, Web3
 from web3.eth import AsyncEth
 from web3.types import TxReceipt
 
+import enums
 from config import config
 from logger import logger
 
@@ -68,3 +69,17 @@ async def random_sleep():
     sleep_time = round(random.uniform(config.min_sleep_time, config.max_sleep_time), 2)
     logger.info(f'[Sleep] Sleeping for {sleep_time} seconds')
     await asyncio.sleep(sleep_time)
+
+
+async def estimate_gas(
+    web3: AsyncWeb3,
+    txn: dict
+) -> int:
+    multiplier = 1.1 if txn.get('chainId', None) in {
+        enums.NetworkNames.Base.value,
+        enums.NetworkNames.Optimism.value
+    } else 1
+
+    gas = await web3.eth.estimate_gas(txn)
+
+    return int(gas * multiplier)

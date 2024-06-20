@@ -168,7 +168,7 @@ async def process_account(
                 )
 
                 try:
-                    txn['gas'] = await web3.eth.estimate_gas(txn)
+                    txn['gas'] = await utils.estimate_gas(web3, txn)
                 except Exception as e:
                     if 'insufficient funds' in str(e):
                         logger.critical(f'[Claim] Insufficient balance to donate {donation} ETH')
@@ -258,7 +258,7 @@ async def process_account(
                     )
 
                     try:
-                        txn['gas'] = await web3.eth.estimate_gas(txn)
+                        txn['gas'] = await utils.estimate_gas(web3, txn)
                     except Exception as e:
                         if 'insufficient funds' in str(e):
                             logger.critical(f'[Claim] Insufficient balance to send {comission_amount} $ZRO')
@@ -324,7 +324,7 @@ async def process_account(
                     )
 
                     try:
-                        txn['gas'] = await web3.eth.estimate_gas(txn)
+                        txn['gas'] = await utils.estimate_gas(web3, txn)
                     except Exception as e:
                         if 'insufficient funds' in str(e):
                             logger.critical(f'[Claim] Insufficient balance to send {zro_balance - comission_amount} $ZRO')
