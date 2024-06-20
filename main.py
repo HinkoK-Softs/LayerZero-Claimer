@@ -6,8 +6,7 @@ from pathlib import Path
 
 import aiofiles
 import aiohttp
-from eth_abi import encode
-from hexbytes import HexBytes
+import eth_abi
 from web3 import AsyncWeb3
 
 import accounts_loader
@@ -45,6 +44,14 @@ async def process_account(
         abi=zro_abi
     )
 
+    with open(Path(__file__).parent / 'abi' / 'Claim.json') as file:
+        claim_abi = file.read()
+
+    claim_contract = web3.eth.contract(
+        address=constants.CLAIM_ADDRESSES[network.chain_id],
+        abi=claim_abi
+    )
+
     logger.info(
         f'[Claim] Processing account {bot_account.address} with {bot_account.amount} $ZRO and {comission_amount / 10 ** constants.TOKEN_DECIMALS} $ZRO as comission'
     )
@@ -59,11 +66,18 @@ async def process_account(
             zro_balance = await zro_contract.functions.balanceOf(eth_account.address).call()
 
             if zro_balance == 0 and bot_account.address not in claimed:
-                donation = 0.1 * bot_account.amount / constants.ETH_PRICE
+                donation_in_wei = await web3.eth.call(
+                    {
+                        'to': await claim_contract.functions.claimContract().call(),
+                        'data': '0xd6d754db' + hex(bot_account.amount_in_wei)[2:].zfill(64)
+                    }
+                )
 
-                logger.info(f'[Claim] Claiming {bot_account.amount} $ZRO to {bot_account.deposit_address}. Donation: {donation} ETH')
+                donation_in_wei = eth_abi.decode(['uint256', 'uint256', 'uint256'], donation_in_wei)[2]
 
-                donation_in_wei = AsyncWeb3.to_wei(donation, 'ether')
+                donation = AsyncWeb3.from_wei(donation_in_wei, 'ether')
+
+                logger.info(f'[Claim] Claiming {bot_account.amount} $ZRO to {bot_account.address}. Donation: {donation} ETH')
 
                 async with aiohttp.ClientSession() as session:
                     proof_response = await session.get(
@@ -91,32 +105,23 @@ async def process_account(
                 if not gas_price:
                     continue
 
-                proof = [HexBytes(p) for p in proof]
-
-                encoded = encode(['uint256', 'uint256', 'address', 'bytes32[]'], [donation_in_wei, amount_in_wei, eth_account.address, proof])
-
-                hex_len = hex(len(proof)).replace('0x', '')
-
-                encoded = encoded.hex().replace(
-                    f'000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000{hex_len}',
-                    f'000000000000000000000000000000000000000000000000000000000000038000000000000000000000000000000000000000000000000000000000000000{hex_len}'
-                ) + '0000000000000000000000000000000000000000000000000000000000000000'
-
-                hex_amount_in_wei = hex(amount_in_wei).replace('0x', '')
-
-                encoded = encoded.replace(f'{hex_amount_in_wei}000000000000000000000000', f'{hex_amount_in_wei}00000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000')
-
-                data = '0xac6ae3ee0000000000000000000000000000000000000000000000000000000000000002' + encoded
-
-                txn = {
-                    'chainId': network.chain_id,
-                    'nonce': await web3.eth.get_transaction_count(eth_account.address),
-                    'from': eth_account.address,
-                    'to': constants.CLAIM_ADDRESSES[network.chain_id],
-                    'data': data,
-                    'value': donation_in_wei,
-                    **gas_price
-                }
+                txn = await claim_contract.functions.donateAndClaim(
+                    2,
+                    donation_in_wei,
+                    amount_in_wei,
+                    proof,
+                    eth_account.address,
+                    b''
+                ).build_transaction(
+                    {
+                        'chainId': network.chain_id,
+                        'nonce': await web3.eth.get_transaction_count(eth_account.address),
+                        'from': eth_account.address,
+                        'value': donation_in_wei,
+                        'gas': 0,
+                        **gas_price
+                    }
+                )
 
                 try:
                     txn['gas'] = await web3.eth.estimate_gas(txn)
