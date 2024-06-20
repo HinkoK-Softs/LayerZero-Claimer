@@ -1,5 +1,6 @@
 import asyncio
 import datetime as dt
+import random
 
 import aiohttp
 from eth_typing import Hash32, HexStr
@@ -8,6 +9,7 @@ from web3 import Web3
 from web3.eth import AsyncEth
 from web3.types import TxReceipt
 
+from config import config
 from logger import logger
 
 
@@ -60,3 +62,9 @@ async def suggest_gas_fees(
                 'maxFeePerGas': Web3.to_wei(float(high_gas['suggestedMaxFeePerGas']), 'gwei'),
                 'maxPriorityFeePerGas': Web3.to_wei(float(high_gas['suggestedMaxPriorityFeePerGas']), 'gwei')
             }
+
+
+async def random_sleep():
+    sleep_time = round(random.uniform(config.min_sleep_time, config.max_sleep_time), 2)
+    logger.info(f'[Sleep] Sleeping for {sleep_time} seconds')
+    await asyncio.sleep(sleep_time)

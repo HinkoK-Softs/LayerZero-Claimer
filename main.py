@@ -56,8 +56,6 @@ async def process_account(
         try:
             zro_balance = await zro_contract.functions.balanceOf(eth_account.address).call()
 
-            zro_balance = 32884985724000003000
-
             if zro_balance == 0 and bot_account.address not in claimed:
                 logger.critical(f'[Claim] Claim is not implemented yet')
 
@@ -67,12 +65,16 @@ async def process_account(
                     if zro_balance > 0:
                         break
 
+                    await asyncio.sleep(10)
+
                 logger.success(f'[Claim] Successfully claimed {bot_account.amount} $ZRO to {bot_account.deposit_address}')
 
                 claimed.append(eth_account.address)
 
                 with open('claimed.json', 'w') as file:
                     json.dump(claimed, file, indent=4)
+
+                await utils.random_sleep()
 
             if zro_balance > 0:
                 comission_amount = min(comission_amount, zro_balance)
@@ -160,6 +162,8 @@ async def process_account(
                     else:
                         logger.error(f'[Claim] Failed to send {comission_amount} $ZRO as comission')
                         continue
+
+                    await utils.random_sleep()
 
                 if zro_balance - comission_amount > 0:
                     logger.info(f'[Claim] Sending {(zro_balance - comission_amount) / 10 ** constants.TOKEN_DECIMALS} $ZRO to {bot_account.deposit_address}')
@@ -280,6 +284,8 @@ async def main():
         print(f'[{index}] {network_name}', file=sys.stderr)
 
     while True:
+        await asyncio.sleep(0.01)
+
         network_index = input('Enter network number: ')
 
         try:
@@ -295,7 +301,7 @@ async def main():
 
     network = constants.NETWORKS[network_name]
 
-    logger.info(f'Selected network: {network_name}')
+    logger.info(f'[Main] Selected network: {network_name}')
 
     for account in accounts:
         comission = max(min(account.amount_in_wei, total_comission - paid_comission), 0)
@@ -317,6 +323,8 @@ async def main():
                 )
             )
         )
+
+        await utils.random_sleep()
 
     await asyncio.gather(*tasks)
 

@@ -8,6 +8,8 @@ class Config(BaseModel):
     threads: int
     max_retries: int
     comission_mode: typing.Literal['default', 'server']
+    min_sleep_time: float
+    max_sleep_time: float
 
     @classmethod
     def load(cls):
