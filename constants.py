@@ -100,5 +100,7 @@ NETWORKS = NetworksDict({
 
 CLAIM_ADDRESSES = {
     enums.NetworkNames.Arbitrum.value: '0xB09F16F625B363875e39ADa56C03682088471523',
+    enums.NetworkNames.Base.value: '0xf19ccb20726Eab44754A59eFC4Ad331e3bF4F248',
+    enums.NetworkNames.Ethereum.value: '0xC28C2b2F5A9B2aF1ad5878E5b1AF5F9bAEa2F971',
     enums.NetworkNames.Optimism.value: '0x3Ef4abDb646976c096DF532377EFdfE0E6391ac3'
 }
