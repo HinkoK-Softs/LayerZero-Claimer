@@ -1,9 +1,9 @@
 {
-    "Arbitrum": "https://rpc.ankr.com/arbitrum",
+    "Arbitrum": "https://arb-mainnet.g.alchemy.com/v2/m9W8TDYbYVW_GHy6nTkncsSdqunWoMi4",
     "Avalanche": "https://rpc.ankr.com/avalanche",
     "Base": "https://rpc.ankr.com/base",
     "BSC": "https://rpc.ankr.com/bsc",
     "Ethereum": "https://rpc.ankr.com/eth",
-    "Optimism": "https://rpc.ankr.com/optimism",
+    "Optimism": "https://opt-mainnet.g.alchemy.com/v2/B-60MNzugcqG3uUQYV8x-LRHDOVG7fa3",
     "Polygon": "https://polygon-rpc.com"
 }
