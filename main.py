@@ -6,6 +6,8 @@ from pathlib import Path
 
 import aiofiles
 import aiohttp
+from eth_abi import encode
+from hexbytes import HexBytes
 from web3 import AsyncWeb3
 
 import accounts_loader
@@ -57,7 +59,90 @@ async def process_account(
             zro_balance = await zro_contract.functions.balanceOf(eth_account.address).call()
 
             if zro_balance == 0 and bot_account.address not in claimed:
-                logger.critical(f'[Claim] Claim is not implemented yet')
+                donation = 0.1 * bot_account.amount / constants.ETH_PRICE
+
+                logger.info(f'[Claim] Claiming {bot_account.amount} $ZRO to {bot_account.deposit_address}. Donation: {donation} ETH')
+
+                donation_in_wei = AsyncWeb3.to_wei(donation, 'ether')
+
+                async with aiohttp.ClientSession() as session:
+                    proof_response = await session.get(
+                        f'https://www.layerzero.foundation/api/proof/{bot_account.address.lower()}'
+                    )
+
+                    if not proof_response.ok:
+                        logger.error(f'Failed to get proof for {bot_account.address}: {await proof_response.text()}')
+                        return False
+
+                    proof_json = await proof_response.json()
+
+                    proof = proof_json['proof'].split('|')
+                    amount_in_wei = int(proof_json['amount'])
+
+                if network.chain_id != enums.NetworkNames.Arbitrum.value:
+                    raise NotImplementedError('Only Arbitrum network is supported')
+
+                gas_price = await utils.suggest_gas_fees(
+                    chain_id=network.chain_id,
+                    proxy=bot_account.proxy
+                )
+
+                if not gas_price:
+                    continue
+
+                proof = [HexBytes(p) for p in proof]
+
+                encoded = encode(['uint256', 'uint256', 'address', 'bytes32[]'], [donation_in_wei, amount_in_wei, '0xD07B3Bf936a1D10402a349c68CF449D757000914', proof])
+
+                hex_len = hex(len(proof)).replace('0x', '')
+
+                encoded = encoded.hex().replace(
+                    f'000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000{hex_len}',
+                    f'000000000000000000000000000000000000000000000000000000000000038000000000000000000000000000000000000000000000000000000000000000{hex_len}'
+                ) + '0000000000000000000000000000000000000000000000000000000000000000'
+
+                hex_amount_in_wei = hex(amount_in_wei).replace('0x', '')
+
+                encoded = encoded.replace(f'{hex_amount_in_wei}000000000000000000000000', f'{hex_amount_in_wei}00000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000')
+
+                data = '0xac6ae3ee0000000000000000000000000000000000000000000000000000000000000002' + encoded
+
+                txn = {
+                    'chainId': network.chain_id,
+                    'nonce': await web3.eth.get_transaction_count(eth_account.address),
+                    'from': eth_account.address,
+                    'to': '0xB09F16F625B363875e39ADa56C03682088471523',
+                    'data': data,
+                    'value': donation_in_wei,
+                    **gas_price
+                }
+
+                try:
+                    txn['gas'] = await web3.eth.estimate_gas(txn)
+                except Exception as e:
+                    if 'insufficient funds' in str(e):
+                        logger.critical(f'[Claim] Insufficient balance to donate {donation} ETH')
+                        break
+                    else:
+                        logger.error(f'[Claim] Exception occured while estimating gas: {e}')
+                        continue
+
+                signed_txn = eth_account.sign_transaction(txn)
+
+                txn_hash = await web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+
+                logger.info(f'[Claim] Claim transaction: {network.txn_explorer_url}{txn_hash.hex()}')
+
+                receipt = await utils.wait_for_transaction_receipt(
+                    web3=web3.eth,
+                    txn_hash=txn_hash,
+                    logging_prefix='Claim'
+                )
+
+                if receipt and receipt['status'] == 1:
+                    logger.success(f'[Claim] Successfully claimed {bot_account.amount} $ZRO to {bot_account.deposit_address}')
+                else:
+                    logger.error(f'[Claim] Failed to claim {bot_account.amount} $ZRO to {bot_account.deposit_address}')
 
                 while True:
                     zro_balance = await zro_contract.functions.balanceOf(eth_account.address).call()
@@ -66,8 +151,6 @@ async def process_account(
                         break
 
                     await asyncio.sleep(10)
-
-                logger.success(f'[Claim] Successfully claimed {bot_account.amount} $ZRO to {bot_account.deposit_address}')
 
                 claimed.append(eth_account.address)
 
@@ -210,6 +293,7 @@ async def process_account(
 
                     if receipt and receipt['status'] == 1:
                         logger.success(f'[Claim] Successfully sent {(zro_balance - comission_amount) / 10 ** constants.TOKEN_DECIMALS} $ZRO')
+                        return
                     else:
                         logger.error(f'[Claim] Failed to send {(zro_balance - comission_amount) / 10 ** constants.TOKEN_DECIMALS} $ZRO')
                         continue
