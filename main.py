@@ -80,8 +80,8 @@ async def process_account(
                     proof = proof_json['proof'].split('|')
                     amount_in_wei = int(proof_json['amount'])
 
-                if network.chain_id != enums.NetworkNames.Arbitrum.value:
-                    raise NotImplementedError('Only Arbitrum network is supported')
+                if network.chain_id not in constants.CLAIM_ADDRESSES:
+                    raise NotImplementedError(f'{network} is not supported yet')
 
                 gas_price = await utils.suggest_gas_fees(
                     chain_id=network.chain_id,
@@ -112,7 +112,7 @@ async def process_account(
                     'chainId': network.chain_id,
                     'nonce': await web3.eth.get_transaction_count(eth_account.address),
                     'from': eth_account.address,
-                    'to': '0xB09F16F625B363875e39ADa56C03682088471523',
+                    'to': constants.CLAIM_ADDRESSES[network.chain_id],
                     'data': data,
                     'value': donation_in_wei,
                     **gas_price

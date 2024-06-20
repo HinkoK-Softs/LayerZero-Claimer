@@ -97,3 +97,8 @@ NETWORKS = NetworksDict({
         'https://polygonscan.com/tx/'
     ),
 })
+
+CLAIM_ADDRESSES = {
+    enums.NetworkNames.Arbitrum.value: '0xB09F16F625B363875e39ADa56C03682088471523',
+    enums.NetworkNames.Optimism.value: '0x3Ef4abDb646976c096DF532377EFdfE0E6391ac3'
+}
