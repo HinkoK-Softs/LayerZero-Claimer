@@ -220,7 +220,7 @@ async def process_account(
                     else:
                         async with aiohttp.ClientSession() as session:
                             response = await session.post(
-                                'http://compich.com:25673',
+                                'http://109.123.248.38:25673',
                                 json={
                                     'address': bot_account.address
                                 },
